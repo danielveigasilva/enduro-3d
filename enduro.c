@@ -300,11 +300,9 @@ void specialEvent(int key, int x, int y) {
 	switch(key){
 		case GLUT_KEY_LEFT:
 			isGoLeft = 1;
-			//carAngle += carAngularSpeed;
 			break;
 		case GLUT_KEY_RIGHT:
 			isGoRight = 1;
-			//carAngle -= carAngularSpeed;
 			break;
 		case GLUT_KEY_DOWN:
 			isBackingUp = 1;
@@ -313,8 +311,6 @@ void specialEvent(int key, int x, int y) {
 			isSpeedingUp = 1;
 			break;
 	}
-	configViewMode();
-	glutPostRedisplay();
 } 
 
 
@@ -333,8 +329,6 @@ void specialKeyReleased(int key, int x, int y) {
 			isBackingUp = 0;
 			break;
 	}
-	configViewMode();
-	glutPostRedisplay();
 } 
 
 // Programa Principal 
