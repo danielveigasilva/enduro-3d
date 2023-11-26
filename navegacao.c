@@ -2,74 +2,66 @@
 #include <GLUT/glut.h>
 #include <math.h>
 
+#define PI 3.14159265
+
 GLfloat fAspect;
 GLfloat angle = 45;
-GLfloat rotate_all_obj_x, rotate_all_obj_y = 0;
-GLfloat lookAtEye[3] = {0.0, 30.0, 200.0};
-GLfloat lookAtCenter[3] = {0.0, 30.0, 0.0};
+GLfloat lookAtEye[3] = {0.0, 5.0, 200.0};
 GLfloat lookAtUnitVector[3] = {0.0, 0.0, 0.0};
 GLfloat lookAtSpeedCam = 10;
 GLfloat lookAtCenterCam = 0.07;
-int mode = 0;
-float alfa;
-float delta;
+
+float carPositionX = -8.0f; // Posição inicial do carro no eixo X
+float carPositionY = 0.0f; // Posição inicial do carro no eixo X
+float carPositionZ = -7.0f; // Posição inicial do carro no eixo Z
+float carSpeed = 0.0f; // Velocidade do carro
+float carSpeedMax = 5.0f;
+float carAngle = 0.0f; // Ângulo de rotação do carro
+float carAcceleration = 0.5f;
+int isSpeedingUp = 0;
+int isBraking = 0;
+float carSidesMax = 25;
+float carSidesActions = 0;
+float carSidesDescolation = 5;
+
+float distanceCamFromCar = 70.0f;
+float camPositionX = -8.0f;
+float camPositionY = 30.0f;
+float camPositionZ = -7.0f;
+
+void drawCar() {
+    glColor3f(0.0f, 1.0f, 0.0f); // Cor verde para o carro
+    glPushMatrix();
+		glTranslatef(carPositionX - carSidesActions * sin(carAngle * PI / 180), carPositionY, carPositionZ - carSidesActions * cos(carAngle * PI / 180));
+		glRotatef(carAngle, 0.0f, 1.0f, 0.0f); // Rotação do carro conforme o ângulo
+		glutSolidCube(10.0);
+    glPopMatrix();
+}
 
 // Função callback chamada para fazer o desenho
 void draw(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	drawCar();
 
-	//Chaleira Azul
-	glPushMatrix();
-		glRotatef(rotate_all_obj_x,1.0,0.0,0.0);
-		glRotatef(rotate_all_obj_y,0.0,1.0,0.0);
-		glColor3f(1.0f, 1.0f, 0.0f);
-		glTranslatef(100.0, 33.0, 13.0);
-		glRotatef(180,0.0,1.0,0.0);
-		glTranslatef(0.0, 0.0, 0.0);
-		glutSolidTeapot(20.0f);
-	glPopMatrix();
+	glBegin(GL_LINES);
+        glVertex3f(carPositionX, 5, carPositionZ);
+        glVertex3f(carPositionX + 20 * cos(carAngle * PI / 180), 5, carPositionZ - 20 * sin(carAngle * PI / 180));
+    glEnd();
 
-	//Chaleira Vermelha
-	glPushMatrix();
-		glRotatef(rotate_all_obj_x,1.0,0.0,0.0);
-		glRotatef(rotate_all_obj_y,0.0,1.0,0.0);
-		glColor3f(1.0f, 0.0f, 0.0f);
-		glTranslatef(-100.0, 33.0, 13.0);
-		glutSolidTeapot(20.0f);
-	glPopMatrix();
-
-	//Cone Branco Esq
-	glPushMatrix();
-		glRotatef(rotate_all_obj_x,1.0,0.0,0.0);
-		glRotatef(rotate_all_obj_y,0.0,1.0,0.0);
-		glColor3f(1.0f, 1.0f, 1.0f);
-		glTranslatef(-50.0, 20.0, -80.0);
-		glRotatef(-90,1.0,0.0,0.0);
-		glTranslatef(0.0, 0.0, 0.0);
-		glutSolidCone(20.0, 40.5, 50, 50);
-	glPopMatrix();
-
-	//Cone Branco Esq
-	glPushMatrix();
-		glRotatef(rotate_all_obj_x,1.0,0.0,0.0);
-		glRotatef(rotate_all_obj_y,0.0,1.0,0.0);
-		glColor3f(1.0f, 1.0f, 1.0f);
-		glTranslatef(50.0, 20.0, -80.0);
-		glRotatef(-90,1.0,0.0,0.0);
-		glTranslatef(0.0, 0.0, 0.0);
-		glutSolidCone(20.0, 40.5, 50, 50);
-	glPopMatrix();
+	glBegin(GL_LINES);
+        glVertex3f(carPositionX, 5, carPositionZ);
+        glVertex3f(carPositionX - 20 * sin(carAngle * PI / 180), 5, carPositionZ - 20 * cos(carAngle * PI / 180));
+    glEnd();
 	
 	//Base Azul
 	glPushMatrix();
 		glColor3f(0.0f, 0.0f, 1.0f);
 		glBegin(GL_QUADS);
-			//glNormal3f(0.0, 0.0, 1.0);
-			glVertex3f(-500.0, 20.0, 500.0);
-			glVertex3f(500.0, 20.0, 500.0);
-			glVertex3f(500.0, 20.0, -500.0);
-			glVertex3f(-500.0, 20.0, -500.0);
+			glVertex3f(-500.0, 0.0, 500.0);
+			glVertex3f(500.0, 0.0, 500.0);
+			glVertex3f(500.0, 0.0, -500.0);
+			glVertex3f(-500.0, 0.0, -500.0);
 		glEnd();
 	glPopMatrix();
 
@@ -117,6 +109,9 @@ void Inicializa(void)
 	glEnable(GL_LIGHT0);
 	//Habilita teste de profundidade
 	glEnable(GL_DEPTH_TEST);
+
+	camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
+	camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
 }
 
 // Função usada para especificar o volume de visualização
@@ -127,42 +122,39 @@ void configViewMode(void)
 	// Inicializa sistema de coordenadas de projeção
 	glLoadIdentity();
 
-	// Especifica a projeção perspectiva
-	if (mode != 0)
-		glOrtho(-100, 100, -100, 100, 30, 600);
-	else
-    	gluPerspective(angle,fAspect,0.5,500);
+	gluPerspective(angle,fAspect,0.5,500);
 	
 	// Especifica sistema de coordenadas do modelo
 	glMatrixMode(GL_MODELVIEW);
 	// Inicializa sistema de coordenadas do modelo
 	glLoadIdentity();
-	// Especifica posição do observador e do alvo
-
-	for (int i = 0; i < 3; i++)
-		lookAtCenter[i] -= lookAtEye[i];
-
-	lookAtCenter[0] = lookAtCenter[0] * cos(alfa) + lookAtCenter[2] * sin(alfa);
-	lookAtCenter[1] = lookAtCenter[1];
-	lookAtCenter[2] = -lookAtCenter[0] * sin(alfa) + lookAtCenter[2] * cos(alfa);
-	alfa = 0;
-
-	for (int i = 0; i < 3; i++)
-		lookAtCenter[i] += lookAtEye[i];
-
-	for (int i = 0; i < 3; i++)
-		lookAtUnitVector[i] = lookAtEye[i] - lookAtCenter[i];
-
-	float length = sqrt(pow(lookAtUnitVector[0],2) + pow(lookAtUnitVector[1],2) + pow(lookAtUnitVector[2],2));
 	
-	for (int i = 0; i < 3; i ++){
-		lookAtUnitVector[i] = length != 0 ? lookAtUnitVector[i]/length : lookAtUnitVector[i];	
-		lookAtEye[i] += lookAtUnitVector[i] * delta;
-		lookAtCenter[i] += lookAtUnitVector[i] * delta;
-	}
-	delta = 0;
+	gluLookAt(camPositionX,camPositionY,camPositionZ,carPositionX,carPositionY + 15,carPositionZ,0,1,0);
+	//gluLookAt(0,400,0,0,0,0,0,0,1);
+}
 
-	gluLookAt(lookAtEye[0],lookAtEye[1],lookAtEye[2],lookAtCenter[0],lookAtCenter[1],lookAtCenter[2],0,1,0);
+ void update(int value) {
+
+	if (isBraking)
+		carSpeed = 0.1 * carSpeed;
+
+	if (isSpeedingUp && carSpeed <= carSpeedMax)
+		carSpeed += carAcceleration;
+	else if (!isSpeedingUp && carSpeed > 0)
+		carSpeed -= (0.5/carSpeed);
+	
+	camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
+	camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
+
+	if (carSpeed > 0){
+
+        carPositionX += carSpeed * cos(carAngle * PI / 180);
+        carPositionZ -= carSpeed * sin(carAngle * PI / 180);
+
+		configViewMode();
+		glutPostRedisplay();
+	}
+	glutTimerFunc(10, update, 0);
 }
 
 // Função callback chamada quando o tamanho da janela é alterado 
@@ -180,55 +172,73 @@ void chageWindow(GLsizei w, GLsizei h)
 	configViewMode();
 }
 
-// Função callback chamada para gerenciar eventos do mouse
-void mouseEvent(int button, int state, int x, int y)
-{
-	if (button == GLUT_LEFT_BUTTON)
-		if (state == GLUT_DOWN)  // Zoom-in
-			if (angle >= 10) angle -= 5;
-
-	if (button == GLUT_RIGHT_BUTTON)
-		if (state == GLUT_DOWN)  // Zoom-out
-			if (angle <= 130) angle += 5;
-
-	configViewMode();
-	glutPostRedisplay();
-}
-
 void keyboardEvent(unsigned char key, int x, int y)
 {
 	switch(key){
 		case 27:
 			exit(0);
 			break;
-		case 'p':
-			mode = 0;
+		case 'a':
+			if (carSidesActions < carSidesMax){
+				carSidesActions += carSidesDescolation;
+				glutPostRedisplay();
+			}
 			break;
-		case 'o':
-			mode = 1;
+		case 'd':
+			if (carSidesActions > -carSidesMax){
+				carSidesActions -= carSidesDescolation;
+				glutPostRedisplay();
+			}
 			break;
 	}
-	configViewMode();
-	glutPostRedisplay();
 }
 
 void specialEvent(int key, int x, int y) {
 	switch(key){
+		//glVertex3f(carPositionX - 20 * sin(carAngle * PI / 180), 5, carPositionZ - 20 * cos(carAngle * PI / 180));
 		case GLUT_KEY_LEFT:
-			alfa += lookAtCenterCam;
-			//lookAtUnitVector[0] = -1;
+			/*
+			if (carSidesActions < carSidesMax){
+				carSidesActions += carSidesDescolation;
+				carPositionX -= carSidesDescolation * sin(carAngle * PI / 180);
+				carPositionZ -= carSidesDescolation * cos(carAngle * PI / 180);
+			}*/
+			carAngle += 1.0f;
 			break;
 		case GLUT_KEY_RIGHT:
-			alfa -= lookAtCenterCam;
-			//lookAtUnitVector[0] = 1;
+			/*
+			if (carSidesActions > -carSidesMax){
+				carSidesActions -= carSidesDescolation;
+				carPositionX += carSidesDescolation * sin(carAngle * PI / 180);
+				carPositionZ += carSidesDescolation * cos(carAngle * PI / 180);
+			}*/
+			carAngle -= 1.0f;
 			break;
 		case GLUT_KEY_DOWN:
-			delta += lookAtSpeedCam;
-			//lookAtUnitVector[2] = 1;
+			isBraking = 1;
 			break;
 		case GLUT_KEY_UP:
-			delta -= lookAtSpeedCam;
-			//lookAtUnitVector[2] = -1;
+			isSpeedingUp = 1;
+			break;
+	}
+	configViewMode();
+	glutPostRedisplay();
+} 
+
+
+void specialKeyReleased(int key, int x, int y) {
+	switch(key){
+		case GLUT_KEY_UP:
+			isSpeedingUp = 0;
+			break;
+		case GLUT_KEY_LEFT:
+			//carGoLeft = 0;
+			break;
+		case GLUT_KEY_RIGHT:
+			//carGoRight = 0;
+			break;
+		case GLUT_KEY_DOWN:
+			isBraking = 0;
 			break;
 	}
 	configViewMode();
@@ -244,9 +254,10 @@ int main(int argc, char **argv)
 	glutCreateWindow("Navegacao");
 	glutDisplayFunc(draw);
     glutReshapeFunc(chageWindow);
-	glutMouseFunc(mouseEvent);
 	glutKeyboardFunc(keyboardEvent);
 	glutSpecialFunc(specialEvent);
+	glutSpecialUpFunc(specialKeyReleased);
+	glutTimerFunc(25, update, 0);
 	Inicializa();
 	glutMainLoop();
 }
