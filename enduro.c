@@ -36,6 +36,7 @@ float camPositionZ = -7.0f;
 float camCenterPositionY = 20.0f;
 
 char modeCam = 't';
+char modeObj = 't';
 
 OBJ *carObj;
 OBJ *trackObj;
@@ -86,7 +87,7 @@ void drawCar() {
 		glRotatef(carAngle, 0.0f, 1.0f, 0.0f);
 		glRotatef(90, 0.0f, 1.0f, 0.0f);
 		glTranslatef(0.0, -1.0, 0.0);
-		glScalef(5.0f, 5.0f, 5.0f); 
+		glScalef(10.0f, 10.0f, 10.0f); 
 		DesenhaObjeto(carObj);
 		//glutSolidCube(10.0);
     glPopMatrix();
@@ -171,7 +172,6 @@ void drawScene(){
 	drawTrack();
 	drawGround();
 	drawSky();
-	drawObjRef();
 }	
 
 // Função callback chamada para fazer o desenho
@@ -183,7 +183,7 @@ void draw(void)
  }
 
 void loadAllObjects(){
-	carObj = CarregaObjeto("./objects/", "car3.obj",0);
+	carObj = CarregaObjeto("./objects/", "car.obj",0);
 	trackObj = CarregaObjeto("./objects/", "track.obj",0);
 	SetaModoDesenho('t');	// 's' para s�lido
 }
@@ -372,6 +372,10 @@ void keyboardEvent(unsigned char key, int x, int y)
 			modeCam = modeCam == 'x' ? 't' : 'x';
 			configViewMode();
 			glutPostRedisplay();
+			break;
+		case 'z':
+			modeObj = modeObj == 't' ? 'w' : 't';
+			SetaModoDesenho(modeObj);
 			break;
 	}
 }
