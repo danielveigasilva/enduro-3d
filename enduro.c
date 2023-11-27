@@ -2,6 +2,7 @@
 #include <GLUT/glut.h>
 #include <math.h>
 #include <stdio.h>
+#include "bibutil.h"
 
 #define PI 3.14159265
 
@@ -12,8 +13,9 @@ GLsizei W, H;
 float carPositionX = -8.0f;
 float carPositionY = 5.0f;
 float carPositionZ = -7.0f;
+
 float carSpeed = 0.0f;
-float carAngularSpeed = 5.0f;
+float carAngularSpeed = 2.5f;
 float carSpeedMax = 10.0f;
 float carAngle = 0.0f;
 float carAcceleration = 0.5f;
@@ -23,14 +25,20 @@ int isBackingUp = 0;
 int isGoLeft = 0;
 int isGoRight = 0;
 
-float carSidesMax = 25;
+float carSidesMax = 5;
 float carSidesActions = 0;
-float carSidesDescolation = 5;
+float carSidesDescolation = 0.5;
 
 float distanceCamFromCar = 80.0f;
 float camPositionX = -8.0f;
 float camPositionY = 30.0f;
 float camPositionZ = -7.0f;
+float camCenterPositionY = 20.0f;
+
+char modeCam = 't';
+
+OBJ *carObj;
+OBJ *trackObj;
 
 GLuint LoadTexture( const char * filename, int width, int height )
 {
@@ -73,41 +81,54 @@ GLuint LoadTexture( const char * filename, int width, int height )
 
 void drawCar() {
     glPushMatrix();
-		glColor3f(0.0f, 1.0f, 0.0f); // Cor verde para o carro
+		glColor3f(1.0f, 1.0f, 0.0f);
 		glTranslatef(carPositionX - carSidesActions * sin(carAngle * PI / 180), carPositionY, carPositionZ - carSidesActions * cos(carAngle * PI / 180));
-		glRotatef(carAngle, 0.0f, 1.0f, 0.0f); // Rotação do carro conforme o ângulo
-		glutSolidCube(10.0);
+		glRotatef(carAngle, 0.0f, 1.0f, 0.0f);
+		glRotatef(90, 0.0f, 1.0f, 0.0f);
+		glTranslatef(0.0, -1.0, 0.0);
+		glScalef(5.0f, 5.0f, 5.0f); 
+		DesenhaObjeto(carObj);
+		//glutSolidCube(10.0);
     glPopMatrix();
 }
 
-void drawTrack(){
+void drawTrack() {
 	glPushMatrix();
-		glColor3f(0.0f, 1.0f, 0.0f);
-		LoadTexture("textures/test.bmp",256,256);
-		glEnable(GL_TEXTURE_2D);
+		glColor3f(0.96f, 0.96f, 0.96f);
+		glTranslatef(0.0, 0.0, 0.0);
+		glScalef(1300.0f, 1300.0f, 1300.0f); 
+		DesenhaObjeto(trackObj);
+	glPopMatrix();
+}
+
+void drawGround(){
+	glPushMatrix();
+		glColor3f(0.0f, 1.28f, 0.0f);
+		//LoadTexture("textures/test.bmp",256,256);
+		//glEnable(GL_TEXTURE_2D);
 		glBegin(GL_QUADS);
-			glTexCoord2f(0.0f, 1.0f);glVertex3f(-500.0, 0.0, 500.0);
-			glTexCoord2f(0.0f, 0.0f);glVertex3f(500.0, 0.0, 500.0);
-			glTexCoord2f(1.0f, 0.0f);glVertex3f(500.0, 0.0, -500.0);
-			glTexCoord2f(1.0f, 1.0f);glVertex3f(-500.0, 0.0, -500.0);
+			glTexCoord2f(0.0f, 1.0f);glVertex3f(-100000.0, 0.0, 100000.0);
+			glTexCoord2f(0.0f, 0.0f);glVertex3f(100000.0, 0.0, 100000.0);
+			glTexCoord2f(1.0f, 0.0f);glVertex3f(100000.0, 0.0, -100000.0);
+			glTexCoord2f(1.0f, 1.0f);glVertex3f(-100000.0, 0.0, -100000.0);
 		glEnd();
-		glDisable(GL_TEXTURE_2D);
+		//glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
 void drawSky(){
 	glPushMatrix();
-		glColor3f(0.0f, 0.0f, 1.0f);
-		LoadTexture("textures/test.bmp",256,256);
-		glEnable(GL_TEXTURE_2D);
+		glColor3f(0.49f, 2.39f, 2.33f);
+		//LoadTexture("textures/test.bmp",256,256);
+		//glEnable(GL_TEXTURE_2D);
 
 		GLUquadric *qobj = gluNewQuadric();
-		glTranslatef(0.0, 0.0, 0.0);
-		gluQuadricTexture(qobj, GL_TRUE);
-		gluSphere(qobj, 500, 100, 100);
+		//glTranslatef(0.0, 0.0, 0.0);
+		//gluQuadricTexture(qobj, GL_TRUE);
+		gluSphere(qobj, 10000, 100, 100);
 		
 		gluDeleteQuadric(qobj);
-		glDisable(GL_TEXTURE_2D);
+		//glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
@@ -148,6 +169,7 @@ void drawObjRef(){
 void drawScene(){
 	drawCar();
 	drawTrack();
+	drawGround();
 	drawSky();
 	drawObjRef();
 }	
@@ -160,8 +182,14 @@ void draw(void)
 	glutSwapBuffers();
  }
 
+void loadAllObjects(){
+	carObj = CarregaObjeto("./objects/", "car3.obj",0);
+	trackObj = CarregaObjeto("./objects/", "track.obj",0);
+	SetaModoDesenho('t');	// 's' para s�lido
+}
+
 // Inicializa parâmetros de rendering
-void Inicializa(void)
+void init(void)
 {
 	GLfloat luzAmbiente[4]={0.2,0.2,0.2,1.0}; 
 	GLfloat luzDifusa[4]={0.7,0.7,0.7,1.0};		 // "cor" 
@@ -203,6 +231,8 @@ void Inicializa(void)
 
 	camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
 	camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);   
+
+	loadAllObjects();
 }
 
 // Função usada para especificar o volume de visualização
@@ -213,18 +243,35 @@ void configViewMode(void)
 	// Inicializa sistema de coordenadas de projeção
 	glLoadIdentity();
 
-	gluPerspective(angle,fAspect,0.5,1000);
+	gluPerspective(angle,fAspect,0.5,100000);
 	
 	// Especifica sistema de coordenadas do modelo
 	glMatrixMode(GL_MODELVIEW);
 	// Inicializa sistema de coordenadas do modelo
 	glLoadIdentity();
+
+	if (modeCam == 't'){
+		float camAnimation = carSpeed/(carSpeedMax*0.7);
+		distanceCamFromCar = 70 + (camAnimation * 10.0f);
+		camPositionY = 30.0f;
+		camCenterPositionY = carPositionY + 15;
+	}
+	else if (modeCam == 'p'){
+		distanceCamFromCar = 0.5f;
+		camPositionY = 17;
+		camCenterPositionY = 17;
+	}
+
+	camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
+	camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
 	
-	gluLookAt(camPositionX,camPositionY,camPositionZ,carPositionX,carPositionY + 15,carPositionZ,0,1,0);
-	//gluLookAt(0,400,0,0,0,0,0,0,1);
+	if (modeCam == 'x')
+		gluLookAt(carPositionX,700,carPositionZ,carPositionX,carPositionY,carPositionZ,0,0,1);
+	else
+		gluLookAt(camPositionX,camPositionY,camPositionZ,carPositionX,camCenterPositionY,carPositionZ,0,1,0);
 }
 
- void updateSpeed(int value) {
+void updateSpeed(int value) {
 
 	if (isBackingUp && carSpeed > 0)
 		carSpeed -= carAcceleration;
@@ -233,13 +280,31 @@ void configViewMode(void)
 	else if (!isSpeedingUp && carSpeed > 0)
 		carSpeed -= (2/carSpeed);
 	
-	camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
-	camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
+	//camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
+	//camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
 
-	if (isGoLeft)
-		carAngle += carAngularSpeed;
-	if (isGoRight)
-		carAngle -= carAngularSpeed;
+	//if (carSpeed > 0){
+		carSidesMax = modeCam == 'p' ? 2 : 5;
+		if (isGoLeft){
+			carAngle += carAngularSpeed;
+			if (carSidesActions > -carSidesMax && carSpeed > 0)
+				carSidesActions -= carSidesDescolation;
+		}
+		else if (!isGoRight){
+			if (carSidesActions < 0)
+				carSidesActions += carSidesDescolation;
+		}
+
+		if (isGoRight){
+			carAngle -= carAngularSpeed;
+			if (carSidesActions < carSidesMax && carSpeed > 0)
+				carSidesActions += carSidesDescolation;
+		}
+		else if(!isGoLeft){
+			if (carSidesActions > 0)
+				carSidesActions -= carSidesDescolation;
+		}
+	//}
 
 	if (carSpeed > 0){
         carPositionX += carSpeed * cos(carAngle * PI / 180);
@@ -247,6 +312,7 @@ void configViewMode(void)
 	}
 	
 	if (isGoLeft || isGoRight || carSpeed > 0){
+		glutPostRedisplay();
 		configViewMode();
 		glutPostRedisplay();
 	}
@@ -270,10 +336,16 @@ void chageWindow(GLsizei w, GLsizei h)
 	configViewMode();
 }
 
+void freeAllObjects(){
+	LiberaObjeto(carObj);
+	LiberaObjeto(trackObj);
+}
+
 void keyboardEvent(unsigned char key, int x, int y)
 {
 	switch(key){
 		case 27:
+			freeAllObjects();
 			exit(0);
 			break;
 		case 'a':
@@ -289,9 +361,17 @@ void keyboardEvent(unsigned char key, int x, int y)
 			}
 			break;
 		case 'c':
-			distanceCamFromCar = distanceCamFromCar == 80.0f ? 8.0f : 80.0f;
-			camPositionY = camPositionY == 30.0f ? 15 : 30.0f;
-			carPositionY = carPositionY == 5.0f ? 0.0f : 5.0f;
+			modeCam = modeCam == 't' ? 'p' : 't';
+			configViewMode();
+			glutPostRedisplay();
+			//distanceCamFromCar = distanceCamFromCar == 80.0f ? 8.0f : 80.0f;
+			//camPositionY = camPositionY == 30.0f ? 10 : 30.0f;
+			//camCenterPositionY = camPositionY == 30.0f ? camPositionY : carPositionY + 15;
+			break;
+		case 'x':
+			modeCam = modeCam == 'x' ? 't' : 'x';
+			configViewMode();
+			glutPostRedisplay();
 			break;
 	}
 }
@@ -312,7 +392,6 @@ void specialEvent(int key, int x, int y) {
 			break;
 	}
 } 
-
 
 void specialKeyReleased(int key, int x, int y) {
 	switch(key){
@@ -346,6 +425,6 @@ int main(int argc, char **argv)
 
 	glutTimerFunc(1, updateSpeed, 0);
 	
-	Inicializa();
+	init();
 	glutMainLoop();
 }
