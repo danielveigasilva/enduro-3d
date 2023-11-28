@@ -136,7 +136,7 @@ void drawCompetitors() {
 
 void drawTrack() {
 	glPushMatrix();
-		glColor3f(0.96f, 0.96f, 0.96f);
+		glColor3f(1.64f, 1.13f, 0.55f);
 		glTranslatef(0.0, 0.0, 0.0);
 		glScalef(1300.0f, 1300.0f, 1300.0f); 
 		DesenhaObjeto(trackObj);
@@ -369,6 +369,35 @@ void configViewMode(void)
 		gluLookAt(camPositionX,camPositionY,camPositionZ,carPositionX,camCenterPositionY,carPositionZ,0,1,0);
 }
 
+int isCollision() {
+    int size = 30;
+    float minX1 = carPositionX;
+    float maxX1 = carPositionX + size;
+    float minY1 = carPositionY;
+    float maxY1 = carPositionY + size;
+    float minZ1 = carPositionZ;
+    float maxZ1 = carPositionZ + size;
+
+	for (int i = 0; i < nCompetitors; i++){
+		float minX2 = listCompetitors[i].position[listCompetitors[i].time].carPositionX;
+		float maxX2 = listCompetitors[i].position[listCompetitors[i].time].carPositionX + size;
+		float minY2 = listCompetitors[i].position[listCompetitors[i].time].carPositionY;
+		float maxY2 = listCompetitors[i].position[listCompetitors[i].time].carPositionY + size;
+		float minZ2 = listCompetitors[i].position[listCompetitors[i].time].carPositionZ;
+		float maxZ2 = listCompetitors[i].position[listCompetitors[i].time].carPositionZ + size;
+
+		// Verificando se há sobreposição em cada eixo
+		if (maxX1 < minX2 || minX1 > maxX2) continue; // Sem sobreposição no eixo X
+		if (maxY1 < minY2 || minY1 > maxY2) continue; // Sem sobreposição no eixo Y
+		if (maxZ1 < minZ2 || minZ1 > maxZ2) continue; // Sem sobreposição no eixo Z
+
+		// Se passou pelos testes acima, os cubos estão colidindo
+		return 1;
+	}
+	return 0;
+}
+
+
 void updateSpeed(int value) {
 
 	if (isBackingUp && carSpeed > 0)
@@ -404,7 +433,7 @@ void updateSpeed(int value) {
 
 	if (recordNewTrajectory){
 		if (fileTrajectory == NULL){
-			carSpeedMax = 10.0f;
+			//carSpeedMax = 10.0f;
 			int id = rand();
 			char fileDir[100];
 			sprintf(fileDir, "%s%d.dat", pathTrajectories, id);
@@ -413,13 +442,18 @@ void updateSpeed(int value) {
 		fprintf(fileTrajectory, "%f;%f;%f;%f\n", carPositionX, carPositionY, carPositionZ, carAngle);
 	}
 	else{
-		if (fileTrajectory != NULL)
+		if (fileTrajectory != NULL){
+			//carSpeedMax = 10.0f;
 			fclose(fileTrajectory);
+		}
 		fileTrajectory = NULL;
 	}
 
 	glutPostRedisplay();
 	
+	if (isCollision())
+		carSpeed = 0.0;
+
 	if (isGoLeft || isGoRight || carSpeed > 0){
 		configViewMode();
 		glutPostRedisplay();
