@@ -2,6 +2,9 @@
 #include <GLUT/glut.h>
 #include <math.h>
 #include <stdio.h>
+#include <time.h>
+#include <dirent.h> 
+#include <string.h>
 #include "bibutil.h"
 
 #define PI 3.14159265
@@ -16,7 +19,7 @@ float carPositionZ = -7.0f;
 
 float carSpeed = 0.0f;
 float carAngularSpeed = 2.5f;
-float carSpeedMax = 10.0f;
+float carSpeedMax = 20.0f;
 float carAngle = 0.0f;
 float carAcceleration = 0.5f;
 
@@ -38,8 +41,38 @@ float camCenterPositionY = 20.0f;
 char modeCam = 't';
 char modeObj = 't';
 
+typedef struct Controll {
+	int isSpeedingUp;
+	int isBackingUp;
+	int isGoLeft;
+	int isGoRight;
+} Controll;
+
+typedef struct Car {
+	float carPositionX;
+	float carPositionY;
+	float carPositionZ;
+	float carAngle;
+	float carSpeed;
+	int carSidesActions;
+	int nPosition;
+	Controll * controll;
+	OBJ *carObj;
+} Car;
+
+
+char pathTrajectories[] = "./trajectories/";
+
 OBJ *carObj;
 OBJ *trackObj;
+
+int nCompetitors = 0;
+Car* listCompetitors;
+
+FILE *fileTrajectory = NULL;
+int recordNewTrajectory = 0;
+
+int timeStemp = 0;
 
 GLuint LoadTexture( const char * filename, int width, int height )
 {
@@ -91,6 +124,22 @@ void drawCar() {
 		DesenhaObjeto(carObj);
 		//glutSolidCube(10.0);
     glPopMatrix();
+}
+
+void drawCompetitors() {
+	printf(">>>%d\n", timeStemp);
+	for (int i = 0; i < nCompetitors; i++){
+		 glPushMatrix();
+			glColor3f(1.0f, 1.0f, 0.0f);
+			glTranslatef(listCompetitors[i].carPositionX - listCompetitors[i].carSidesActions * sin(listCompetitors[i].carAngle * PI / 180), listCompetitors[i].carPositionY, listCompetitors[i].carPositionZ - listCompetitors[i].carSidesActions * cos(listCompetitors[i].carAngle * PI / 180));
+			glRotatef(listCompetitors[i].carAngle, 0.0f, 1.0f, 0.0f);
+			glRotatef(90, 0.0f, 1.0f, 0.0f);
+			glTranslatef(0.0, -1.0, 0.0);
+			glScalef(10.0f, 10.0f, 10.0f); 
+			DesenhaObjeto(listCompetitors[i].carObj);
+			//glutSolidCube(10.0);
+		glPopMatrix();
+	}
 }
 
 void drawTrack() {
@@ -169,7 +218,9 @@ void drawObjRef(){
 
 void drawScene(){
 	drawCar();
+	drawCompetitors();
 	drawTrack();
+	drawObjRef();
 	drawGround();
 	drawSky();
 }	
@@ -185,12 +236,16 @@ void draw(void)
 void loadAllObjects(){
 	carObj = CarregaObjeto("./objects/", "car.obj",0);
 	trackObj = CarregaObjeto("./objects/", "track.obj",0);
-	SetaModoDesenho('t');	// 's' para s�lido
+	for (int i = 0; i < nCompetitors; i++)
+		listCompetitors[i].carObj = CarregaObjeto("./objects/", "car.obj",0);
+
+	SetaModoDesenho(modeObj);
 }
 
 // Inicializa parâmetros de rendering
 void init(void)
 {
+	srand( (unsigned)time(NULL) );
 	GLfloat luzAmbiente[4]={0.2,0.2,0.2,1.0}; 
 	GLfloat luzDifusa[4]={0.7,0.7,0.7,1.0};		 // "cor" 
 	GLfloat luzEspecular[4]={1.0, 1.0, 1.0, 1.0};// "brilho" 
@@ -232,6 +287,56 @@ void init(void)
 	camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
 	camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);   
 
+	nCompetitors = 0;
+	struct dirent *dir;
+	DIR *d = opendir(pathTrajectories);
+	
+	while ((dir = readdir(d)) != NULL)
+		if (strcmp(dir->d_name, ".") && strcmp(dir->d_name, ".."))
+			nCompetitors++;
+	
+	listCompetitors = (Car*) calloc(nCompetitors, sizeof(Car));
+	d = opendir(pathTrajectories);
+
+	int index = 0;
+	while ((dir = readdir(d)) != NULL){
+		if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
+			continue;
+		
+		char fileDir[100];
+		listCompetitors[index].carObj = NULL;
+		
+		sprintf(fileDir, "%s%s", pathTrajectories, dir->d_name);
+		printf("%s\n",  fileDir);
+		
+		FILE * filePositions = fopen(fileDir, "r");
+		char c;
+		while ((c = fgetc(filePositions)) != EOF)
+			if (c == '\n')
+				listCompetitors[index].nPosition++;
+		listCompetitors[index].nPosition++;
+		listCompetitors[index].controll = (Controll*) calloc(listCompetitors[index].nPosition, sizeof(Controll));
+
+		fclose(filePositions);
+
+		filePositions = fopen(fileDir, "r");
+		char * line = NULL;
+		size_t len = 0;
+		int indexPosition = 0;
+		while ((getline(&line, &len, filePositions)) != -1) {
+			printf("%s", line);
+			float speeding, backing, left, right;
+			sscanf(line, "%f;%f;%f;%f", &speeding, &backing, &left, &right); 
+			listCompetitors[index].controll[indexPosition].isSpeedingUp = speeding;
+			listCompetitors[index].controll[indexPosition].isBackingUp = backing; 
+			listCompetitors[index].controll[indexPosition].isGoLeft = left;
+			listCompetitors[index].controll[indexPosition].isGoRight = right;
+			indexPosition++;
+		}
+		index ++;
+	}
+
+	closedir(d);
 	loadAllObjects();
 }
 
@@ -279,45 +384,91 @@ void updateSpeed(int value) {
 		carSpeed += carAcceleration;
 	else if (!isSpeedingUp && carSpeed > 0)
 		carSpeed -= (2/carSpeed);
-	
-	//camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
-	//camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
 
-	//if (carSpeed > 0){
-		carSidesMax = modeCam == 'p' ? 2 : 5;
-		if (isGoLeft){
-			carAngle += carAngularSpeed;
-			if (carSidesActions > -carSidesMax && carSpeed > 0)
-				carSidesActions -= carSidesDescolation;
-		}
-		else if (!isGoRight){
-			if (carSidesActions < 0)
-				carSidesActions += carSidesDescolation;
-		}
+	carSidesMax = modeCam == 'p' ? 2 : 5;
+	if (isGoLeft){
+		carAngle += carAngularSpeed;
+		if (carSidesActions > -carSidesMax && carSpeed > 0)
+			carSidesActions -= carSidesDescolation;
+	}
+	else if (!isGoRight)
+		if (carSidesActions < 0)
+			carSidesActions += carSidesDescolation;
 
-		if (isGoRight){
-			carAngle -= carAngularSpeed;
-			if (carSidesActions < carSidesMax && carSpeed > 0)
-				carSidesActions += carSidesDescolation;
-		}
-		else if(!isGoLeft){
-			if (carSidesActions > 0)
-				carSidesActions -= carSidesDescolation;
-		}
-	//}
+	if (isGoRight){
+		carAngle -= carAngularSpeed;
+		if (carSidesActions < carSidesMax && carSpeed > 0)
+			carSidesActions += carSidesDescolation;
+	}
+	else if(!isGoLeft)
+		if (carSidesActions > 0)
+			carSidesActions -= carSidesDescolation;
 
 	if (carSpeed > 0){
         carPositionX += carSpeed * cos(carAngle * PI / 180);
         carPositionZ -= carSpeed * sin(carAngle * PI / 180);
 	}
+
+	if (recordNewTrajectory){
+		if (fileTrajectory == NULL){
+			int id = rand();
+			char fileDir[100];
+			sprintf(fileDir, "%s%d.dat", pathTrajectories, id);
+			fileTrajectory = fopen(fileDir, "w");
+		}
+		fprintf(fileTrajectory, "%d;%d;%d;%d\n", isSpeedingUp, isBackingUp, isGoLeft, isGoRight);
+	}
+	else{
+		if (fileTrajectory != NULL)
+			fclose(fileTrajectory);
+		fileTrajectory = NULL;
+	}
+
+	int updateCompetitors = 0;
+	for (int i = 0; i < nCompetitors; i++){
+		
+		if (listCompetitors[i].controll[timeStemp].isBackingUp && listCompetitors[i].carSpeed > 0)
+			listCompetitors[i].carSpeed -= carAcceleration;
+		else if (listCompetitors[i].controll[timeStemp].isSpeedingUp && listCompetitors[i].carSpeed <= carSpeedMax)
+			listCompetitors[i].carSpeed += carAcceleration;
+		else if (!listCompetitors[i].controll[timeStemp].isSpeedingUp && listCompetitors[i].carSpeed > 0)
+			listCompetitors[i].carSpeed -= (2/listCompetitors[i].carSpeed);
+
+		if (listCompetitors[i].controll[timeStemp].isGoLeft){
+			listCompetitors[i].carAngle += carAngularSpeed;
+			if (listCompetitors[i].carSidesActions > -carSidesMax && listCompetitors[i].carSpeed > 0)
+				listCompetitors[i].carSidesActions -= carSidesDescolation;
+		}
+		else if (!listCompetitors[i].controll[timeStemp].isGoRight)
+			if (listCompetitors[i].carSidesActions < 0)
+				listCompetitors[i].carSidesActions += carSidesDescolation;
+
+		if (listCompetitors[i].controll[timeStemp].isGoRight){
+			listCompetitors[i].carAngle -= carAngularSpeed;
+			if (listCompetitors[i].carSidesActions < carSidesMax && listCompetitors[i].carSpeed > 0)
+				listCompetitors[i].carSidesActions += carSidesDescolation;
+		}
+		else if(!listCompetitors[i].controll[timeStemp].isGoLeft)
+			if (listCompetitors[i].carSidesActions > 0)
+				listCompetitors[i].carSidesActions -= carSidesDescolation;
+
+		if (listCompetitors[i].carSpeed > 0){
+			listCompetitors[i].carPositionX += listCompetitors[i].carSpeed * cos(listCompetitors[i].carAngle * PI / 180);
+			listCompetitors[i].carPositionZ -= listCompetitors[i].carSpeed * sin(listCompetitors[i].carAngle * PI / 180);
+		}
+		
+		if (listCompetitors[i].controll[timeStemp].isGoLeft || listCompetitors[i].controll[timeStemp].isGoRight || listCompetitors[i].carSpeed > 0)
+			updateCompetitors = 1;	
+	}
+	timeStemp ++;
 	
-	if (isGoLeft || isGoRight || carSpeed > 0){
+	if (isGoLeft || isGoRight || carSpeed > 0 || updateCompetitors){
 		glutPostRedisplay();
 		configViewMode();
 		glutPostRedisplay();
 	}
 
-	glutTimerFunc(1, updateSpeed, 0);
+	glutTimerFunc(20, updateSpeed, 0);
 }
 
 // Função callback chamada quando o tamanho da janela é alterado 
@@ -339,6 +490,8 @@ void chageWindow(GLsizei w, GLsizei h)
 void freeAllObjects(){
 	LiberaObjeto(carObj);
 	LiberaObjeto(trackObj);
+	//for (int i = 0; i < nCompetitors; i++)
+	//	LiberaObjeto(listCompetitors[i].carObj);
 }
 
 void keyboardEvent(unsigned char key, int x, int y)
@@ -376,6 +529,11 @@ void keyboardEvent(unsigned char key, int x, int y)
 		case 'z':
 			modeObj = modeObj == 't' ? 'w' : 't';
 			SetaModoDesenho(modeObj);
+			configViewMode();
+			glutPostRedisplay();
+			break;
+		case 'r':
+			recordNewTrajectory = recordNewTrajectory ? 0 : 1;
 			break;
 	}
 }
@@ -427,7 +585,7 @@ int main(int argc, char **argv)
 	glutSpecialFunc(specialEvent);
 	glutSpecialUpFunc(specialKeyReleased);
 
-	glutTimerFunc(1, updateSpeed, 0);
+	glutTimerFunc(20, updateSpeed, 0);
 	
 	init();
 	glutMainLoop();
