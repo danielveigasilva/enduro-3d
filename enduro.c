@@ -20,7 +20,7 @@ float carPositionZ = -7.0f;
 float carSpeed = 0.0f;
 float carAngularSpeed = 2.5f;
 float carSpeedMax = 15.0f;
-float carAngle = 0.0f;
+float carAngle = 180.0f;
 float carAcceleration = 0.5f;
 
 int isSpeedingUp = 0;
@@ -158,6 +158,21 @@ void drawGround(){
 	glPopMatrix();
 }
 
+void drawArrive(){
+	glPushMatrix();
+		glColor3f(255.0f, 255.0f, 255.0f);
+		//LoadTexture("textures/test.bmp",256,256);
+		//glEnable(GL_TEXTURE_2D);
+		glBegin(GL_QUADS);
+			glTexCoord2f(0.0f, 1.0f);glVertex3f(-60.0f, 8.0, 120.0f);
+			glTexCoord2f(0.0f, 0.0f);glVertex3f(120.0f, 8.0, 120.0f);
+			glTexCoord2f(1.0f, 0.0f);glVertex3f(120.0f, 8.0, -150.0f);
+			glTexCoord2f(1.0f, 1.0f);glVertex3f(-60.0f, 8.0, -150.0f);
+		glEnd();
+		//glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+}
+
 void drawSky(){
 	glPushMatrix();
 		glColor3f(0.49f, 2.39f, 2.33f);
@@ -212,7 +227,7 @@ void drawScene(){
 	drawCar();
 	drawCompetitors();
 	drawTrack();
-	drawObjRef();
+	drawArrive();
 	drawGround();
 	drawSky();
 }	
@@ -353,20 +368,27 @@ void configViewMode(void)
 		distanceCamFromCar = 70 + (camAnimation * 10.0f);
 		camPositionY = 30.0f;
 		camCenterPositionY = carPositionY + 15;
+
+		camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
+		camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
+
+		gluLookAt(camPositionX,camPositionY,camPositionZ,carPositionX,camCenterPositionY,carPositionZ,0,1,0);
 	}
 	else if (modeCam == 'p'){
-		distanceCamFromCar = 0.5f;
+		distanceCamFromCar = -10.0f;
 		camPositionY = 17;
 		camCenterPositionY = 17;
-	}
 
-	camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
-	camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
-	
-	if (modeCam == 'x')
+		camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
+		camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
+
+		float targetX = carPositionX + 30 * cos(carAngle * PI / 180);
+		float targetZ = carPositionZ - 30 * sin(carAngle * PI / 180);
+
+		gluLookAt(camPositionX,camPositionY,camPositionZ,targetX,camCenterPositionY,targetZ,0,1,0);
+	}
+	else if (modeCam == 'x')
 		gluLookAt(carPositionX,700,carPositionZ,carPositionX,carPositionY,carPositionZ,0,0,1);
-	else
-		gluLookAt(camPositionX,camPositionY,camPositionZ,carPositionX,camCenterPositionY,carPositionZ,0,1,0);
 }
 
 int isCollision() {
@@ -407,45 +429,48 @@ void updateSpeed(int value) {
 	else if (!isSpeedingUp && carSpeed > 0)
 		carSpeed -= (2/carSpeed);
 
-	carSidesMax = modeCam == 'p' ? 2 : 5;
-	if (isGoLeft){
-		carAngle += carAngularSpeed;
-		if (carSidesActions > -carSidesMax && carSpeed > 0)
-			carSidesActions -= carSidesDescolation;
-	}
-	else if (!isGoRight)
-		if (carSidesActions < 0)
-			carSidesActions += carSidesDescolation;
-
-	if (isGoRight){
-		carAngle -= carAngularSpeed;
-		if (carSidesActions < carSidesMax && carSpeed > 0)
-			carSidesActions += carSidesDescolation;
-	}
-	else if(!isGoLeft)
-		if (carSidesActions > 0)
-			carSidesActions -= carSidesDescolation;
+	carSidesMax = modeCam == 'p' ? 0 : 5;
 
 	if (carSpeed > 0){
-        carPositionX += carSpeed * cos(carAngle * PI / 180);
-        carPositionZ -= carSpeed * sin(carAngle * PI / 180);
+		if (isGoLeft){
+			carAngle += carAngularSpeed;
+			if (carSidesActions > -carSidesMax && carSpeed > 0)
+				carSidesActions -= carSidesDescolation;
+		}
+		else if (!isGoRight)
+			if (carSidesActions < 0)
+				carSidesActions += carSidesDescolation;
+
+		if (isGoRight){
+			carAngle -= carAngularSpeed;
+			if (carSidesActions < carSidesMax && carSpeed > 0)
+				carSidesActions += carSidesDescolation;
+		}
+		else if(!isGoLeft)
+			if (carSidesActions > 0)
+				carSidesActions -= carSidesDescolation;
+
+		if (carSpeed > 0){
+			carPositionX += carSpeed * cos(carAngle * PI / 180);
+			carPositionZ -= carSpeed * sin(carAngle * PI / 180);
+		}
 	}
 
 	if (recordNewTrajectory){
 		if (fileTrajectory == NULL){
-			//carSpeedMax = 10.0f;
 			int id = rand();
 			char fileDir[100];
 			sprintf(fileDir, "%s%d.dat", pathTrajectories, id);
 			fileTrajectory = fopen(fileDir, "w");
+
+			for (int i = 0; i < nCompetitors; i++)
+				listCompetitors[i].time=0;
 		}
 		fprintf(fileTrajectory, "%f;%f;%f;%f\n", carPositionX, carPositionY, carPositionZ, carAngle);
 	}
 	else{
-		if (fileTrajectory != NULL){
-			//carSpeedMax = 10.0f;
+		if (fileTrajectory != NULL)
 			fclose(fileTrajectory);
-		}
 		fileTrajectory = NULL;
 	}
 
