@@ -929,7 +929,7 @@ TEX *CarregaTextura(char *arquivo, bool mipmap)
 	else
 	{
 		// Envia a textura para OpenGL, usando o formato RGB
-		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, pImage->dimx, pImage->dimx,
+		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, pImage->dimx, pImage->dimy,
 			0, formato, GL_UNSIGNED_BYTE, pImage->data);
 		// Ajusta os filtros iniciais para a textura
 		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1014,7 +1014,7 @@ TEX *CarregaTexturasCubo(char *nomebase, bool mipmap)
 			formato, GL_UNSIGNED_BYTE, pImage->data);
 		else
 			// Envia a textura para OpenGL, usando o formato RGB
-			glTexImage2D (faces[i], 0, GL_RGB, pImage->dimx, pImage->dimx,
+			glTexImage2D (faces[i], 0, GL_RGB, pImage->dimx, pImage->dimy,
 				0, formato, GL_UNSIGNED_BYTE, pImage->data);
 
 		// Finalmente, libera a mem�ria ocupada pela imagem (j� que a textura j� foi enviada para OpenGL)

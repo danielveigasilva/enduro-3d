@@ -19,7 +19,7 @@ float carPositionZ = -7.0f;
 
 float carSpeed = 0.0f;
 float carAngularSpeed = 2.5f;
-float carSpeedMax = 15.0f;
+float carSpeedMax = 20.0f;
 float carAngle = 180.0f;
 float carAcceleration = 0.5f;
 
@@ -67,69 +67,26 @@ ControllCar* listCompetitors;
 FILE *fileTrajectory = NULL;
 int recordNewTrajectory = 0;
 
-GLuint LoadTexture( const char * filename, int width, int height )
-{
-  GLuint texture;
-  unsigned char * data;
-
-  FILE * file;
-  file = fopen( filename, "rb" );
-  
-
-  if ( file == NULL ) return 0;
-  data = (unsigned char *)malloc( width * height * 3 );
-  fread( data, width * height * 3, 1, file );
-  fclose( file );
-
-  for(int i = 0; i < width * height ; ++i)
-  {
-    int index = i*3;
-    unsigned char B,R;
-    B = data[index];
-    R = data[index+2];
-
-    data[index] = R;
-    data[index+2] = B;
-  }
-  
-  glGenTextures( 1, &texture );
-  glBindTexture( GL_TEXTURE_2D, texture );
-  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE,GL_MODULATE );
-  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST );
-
-  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR );
-  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,GL_REPEAT );
-  glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,GL_REPEAT );
-  gluBuild2DMipmaps( GL_TEXTURE_2D, 3, width, height,GL_RGB, GL_UNSIGNED_BYTE, data );
-  free( data );
-
-  return texture;
-}
-
 void drawCar() {
     glPushMatrix();
-		glColor3f(1.0f, 1.0f, 0.0f);
 		glTranslatef(carPositionX - carSidesActions * sin(carAngle * PI / 180), carPositionY, carPositionZ - carSidesActions * cos(carAngle * PI / 180));
 		glRotatef(carAngle, 0.0f, 1.0f, 0.0f);
 		glRotatef(90, 0.0f, 1.0f, 0.0f);
 		glTranslatef(0.0, -1.0, 0.0);
 		glScalef(10.0f, 10.0f, 10.0f); 
 		DesenhaObjeto(carObj);
-		//glutSolidCube(10.0);
     glPopMatrix();
 }
 
 void drawCompetitors() {
 	for (int i = 0; i < nCompetitors; i++){
 		glPushMatrix();
-			glColor3f(1.0f, 1.0f, 0.0f);
 			glTranslatef(listCompetitors[i].position[listCompetitors[i].time].carPositionX, listCompetitors[i].position[listCompetitors[i].time].carPositionY, listCompetitors[i].position[listCompetitors[i].time].carPositionZ);
 			glRotatef(listCompetitors[i].position[listCompetitors[i].time].carAngle, 0.0f, 1.0f, 0.0f);
 			glRotatef(90, 0.0f, 1.0f, 0.0f);
 			glTranslatef(0.0, -1.0, 0.0);
 			glScalef(10.0f, 10.0f, 10.0f); 
 			DesenhaObjeto(listCompetitors[i].carObj);
-			//glutSolidCube(10.0);
     	glPopMatrix();
 	}
 }
@@ -145,47 +102,42 @@ void drawTrack() {
 
 void drawGround(){
 	glPushMatrix();
-		glColor3f(0.0f, 1.28f, 0.0f);
-		//LoadTexture("textures/test.bmp",256,256);
-		//glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, CarregaTextura("./textures/ground.jpg", 0)->texid);
+		glEnable(GL_TEXTURE_2D);
 		glBegin(GL_QUADS);
-			glTexCoord2f(0.0f, 1.0f);glVertex3f(-100000.0, 0.0, 100000.0);
-			glTexCoord2f(0.0f, 0.0f);glVertex3f(100000.0, 0.0, 100000.0);
-			glTexCoord2f(1.0f, 0.0f);glVertex3f(100000.0, 0.0, -100000.0);
-			glTexCoord2f(1.0f, 1.0f);glVertex3f(-100000.0, 0.0, -100000.0);
+			glTexCoord2f(0.0f, 50.0f);glVertex3f(-10000.0, 0.0, 10000.0);
+			glTexCoord2f(0.0f, 0.0f);glVertex3f(10000.0, 0.0, 10000.0);
+			glTexCoord2f(50.0f, 0.0f);glVertex3f(10000.0, 0.0, -10000.0);
+			glTexCoord2f(50.0f, 50.0f);glVertex3f(-10000.0, 0.0, -10000.0);
 		glEnd();
-		//glDisable(GL_TEXTURE_2D);
+		glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
 void drawArrive(){
 	glPushMatrix();
 		glColor3f(255.0f, 255.0f, 255.0f);
-		//LoadTexture("textures/test.bmp",256,256);
-		//glEnable(GL_TEXTURE_2D);
 		glBegin(GL_QUADS);
 			glTexCoord2f(0.0f, 1.0f);glVertex3f(-60.0f, 8.0, 120.0f);
 			glTexCoord2f(0.0f, 0.0f);glVertex3f(120.0f, 8.0, 120.0f);
 			glTexCoord2f(1.0f, 0.0f);glVertex3f(120.0f, 8.0, -150.0f);
 			glTexCoord2f(1.0f, 1.0f);glVertex3f(-60.0f, 8.0, -150.0f);
 		glEnd();
-		//glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
 void drawSky(){
 	glPushMatrix();
-		glColor3f(0.49f, 2.39f, 2.33f);
-		//LoadTexture("textures/test.bmp",256,256);
-		//glEnable(GL_TEXTURE_2D);
-
+		glBindTexture(GL_TEXTURE_2D,CarregaTextura("./textures/sky.jpg", 0)->texid);
+		glEnable(GL_TEXTURE_2D);
+		glTranslatef(0.0, -1000 ,0.0);
+		glRotated(-90,1,0,0);
 		GLUquadric *qobj = gluNewQuadric();
-		//glTranslatef(0.0, 0.0, 0.0);
-		//gluQuadricTexture(qobj, GL_TRUE);
-		gluSphere(qobj, 10000, 100, 100);
-		
+		gluQuadricTexture(qobj, GL_TRUE);
+		gluCylinder(qobj, 10000,10000, 10000, 100, 100);
 		gluDeleteQuadric(qobj);
-		//glDisable(GL_TEXTURE_2D);
+
+		glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
@@ -367,7 +319,7 @@ void configViewMode(void)
 		float camAnimation = carSpeed/(carSpeedMax*0.7);
 		distanceCamFromCar = 70 + (camAnimation * 10.0f);
 		camPositionY = 30.0f;
-		camCenterPositionY = carPositionY + 15;
+		camCenterPositionY = carPositionY + 20;
 
 		camPositionX = carPositionX - distanceCamFromCar * cos(carAngle * PI / 180);
 		camPositionZ = carPositionZ + distanceCamFromCar * sin(carAngle * PI / 180);
