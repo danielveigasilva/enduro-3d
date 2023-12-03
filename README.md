@@ -22,5 +22,5 @@
 <p align="center">
     <img src="/img/cam1.png" width="80%">
     <img src="/img/cam2.png" width="80%">
-    <img src="/img/cam2.png" width="80%">
+    <img src="/img/cam3.png" width="80%">
 </p>
